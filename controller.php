@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Condicional: si se envió una imagen desde el formulario, continúa la ejecución
     if (isset($_FILES['imagen']) && strpos($_FILES['imagen']['type'], 'image/') === 0) {
         $archivoEntrante = $_FILES['imagen'];
-// Guarda el archivo entrante en variable
+        // Guarda el archivo entrante en variable
         // Define el directorio para archivos temporales
         $directorioTemporal = 'salientes/';
 
@@ -78,5 +78,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo 'Intentaste subir una canción? >:(';
     }
 }
-?>
-
