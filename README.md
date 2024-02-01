@@ -1,2 +1,2 @@
-Utilidades:
+Utilidades necesarias:
 GD
