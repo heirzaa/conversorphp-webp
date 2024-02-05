@@ -42,39 +42,69 @@ function convertImageToWebP($source, $destination, $quality = 80)
 
 // Verifica si la solicitud es de tipo POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Condicional: si se envió una imagen desde el formulario, continúa la ejecución
-    if (isset($_FILES['imagen']) && strpos($_FILES['imagen']['type'], 'image/') === 0) {
-        $archivoEntrante = $_FILES['imagen'];
-        // Guarda el archivo entrante en variable
+    if (isset($_FILES['imagenes'])) {
+        $imagenesEntrantes = $_FILES['imagenes'];
+        
         // Define el directorio para archivos temporales
         $directorioTemporal = 'salientes/';
 
-        // Captura la ruta específica del archivo que entró
-        $rutaArchivoTemporal = $directorioTemporal . basename($archivoEntrante['name']);
+        $rutasImagenesSalientes = array();
 
-        if (move_uploaded_file($archivoEntrante['tmp_name'], $rutaArchivoTemporal)) {
-            // Esta linea establece que el archivo que sale, se llamará igual que el que entró con extension webp y se guardará en carpeta temporal de salientes en directorio
-            $rutaArchivoSaliente = 'salientes/' . pathinfo($archivoEntrante['name'], PATHINFO_FILENAME) . '.webp';
-            if (convertImageToWebP($rutaArchivoTemporal, $rutaArchivoSaliente)) {
-                // Enviar el archivo WebP al navegador para su descarga
-                header('Content-Type: image/webp');
-                header('Content-Disposition: attachment; filename="' . basename($rutaArchivoSaliente) . '"');
-                readfile($rutaArchivoSaliente);
+        foreach ($imagenesEntrantes['tmp_name'] as $index => $imagenTemporal) {
+            $nombreOriginal = $imagenesEntrantes['name'][$index];
+            $rutaImagenTemporal = $directorioTemporal . basename($nombreOriginal);
 
-                // Se elimina el resultado tras descarga
-                unlink($rutaArchivoSaliente);
+            if (move_uploaded_file($imagenTemporal, $rutaImagenTemporal)) {
+                $rutaImagenSaliente = 'salientes/' . pathinfo($nombreOriginal, PATHINFO_FILENAME) . '.webp';
 
-                // e igualmente, el archivo que entra
-                unlink($rutaArchivoTemporal);
+                if (convertImageToWebP($rutaImagenTemporal, $rutaImagenSaliente)) {
+                    $rutasImagenesSalientes[] = $rutaImagenSaliente;
+                } else {
+                    echo 'Error durante el proceso de conversión para ' . $nombreOriginal . '. ';
+                }
 
-                echo '¡Conversión realizada exitosamente!';
+                // Elimina el archivo temporal después de procesarlo
+                unlink($rutaImagenTemporal);
             } else {
-                echo 'Error durante el proceso de conversión. ';
+                echo 'Error al subir la imagen ' . $nombreOriginal . '. Archivo de entrada no eliminado.';
+            }
+        }
+
+        if (!empty($rutasImagenesSalientes)) {
+            // Comprime las imágenes en un archivo ZIP
+            $nombreZip = 'imagenes_convertidas.zip';
+            $rutaZip = $directorioTemporal . $nombreZip;
+            $zip = new ZipArchive();
+            
+            if ($zip->open($rutaZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+                foreach ($rutasImagenesSalientes as $rutaImagenSaliente) {
+                    $archivoZip = pathinfo($rutaImagenSaliente, PATHINFO_BASENAME);
+                    $zip->addFile($rutaImagenSaliente, $archivoZip);
+                }
+                $zip->close();
+
+                // Envía el archivo ZIP al navegador
+                header('Content-Type: application/zip');
+                header('Content-Disposition: attachment; filename="' . $nombreZip . '"');
+                readfile($rutaZip);
+
+                // Elimina el archivo ZIP y las imágenes después de la descarga
+                unlink($rutaZip);
+                foreach ($rutasImagenesSalientes as $rutaImagenSaliente) {
+                    unlink($rutaImagenSaliente);
+                }
+
+                echo '¡Conversión realizada exitosamente para todas las imágenes!';
+            } else {
+                echo 'Error al crear el archivo ZIP.';
             }
         } else {
-            echo 'Error al subir la imagen. Archivo de entrada no eliminado.';
+            echo 'No se pudieron convertir las imágenes.';
         }
     } else {
-        echo 'Intentaste subir una canción? >:(';
+        echo 'No se recibieron imágenes.';
     }
+} else {
+    echo 'Acceso no autorizado.';
 }
+?>
